@@ -179,11 +179,6 @@ int parse(std::string List)
     return weightAll;
 }
 
-
-
-//If you see a number copy until a comma or white space
-
-//if you see a blackslash skip to next char
 using namespace std;
 
 int main(int argc, const char* argv[])
@@ -196,7 +191,7 @@ int main(int argc, const char* argv[])
     inputFile.open(infile1.c_str());
     getline(inputFile, List);
 
-    cout << parse(List);
+    cout << "The weight of the data is " << parse(List) << "." << endl;
 
 
     return 0;
