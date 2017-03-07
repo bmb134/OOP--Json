@@ -5,105 +5,181 @@
 #include <memory>
 #include <map>
 
+int parse(std::string);
+
 struct Value
 {
 	virtual ~Value() = default;
-	virtual int weight() const = 0;
+	virtual int weight(std::string str) const = 0;
 };
 
 struct Literal:Value
 {
-	int weight() const
+	virtual int weight(std::string str) const
 	{
 		return 1;
 	}
 };
 
-struct Null
+struct Null:Literal
 {
-
 };
 
-struct Bool
+struct Bool:Literal
 {
-
 };
 
-struct Num
+struct Num:Literal
 {
-
 };
 
-struct String:Literal,std::string
+struct String:Literal
 {
-
 };
 
-struct Array:Value,std::vector<Value*>
+struct Array:Value
 {
-	~Array()
-    {
-        for(Value *v: *this)
-            delete v;
-    }
-
-    int weight() const
+    int weight(std::string str) const
 	{
-		int n = 0;
-		for(Value* v: *this)
-			n += v->weight();
-		return n;
+		int weightArray = 1;
+		weightArray += parse(str);
+		return weightArray;
 	}
 };
-/*
-struct Array:Value,std::vector<std::unique_ptr<Value*>>  // smart ptr can not copy
-{
-	using vector<Value*>::vector
-	~Array()
-    {
-        for(Value *v: *this)
-            delete v;
-    }
-
-	int weight() const
-	{
-		int n = 0;
-		for(Value* v: *this)
-		{
-			n += v->weight();
-		}
-		return n;
-	}
-};
-*/
 
 struct Object:Value
 {
-	std::map <std::string, Value*> Valuelist;
+    int weight(std::string str) const
+	{
+		int weightObject = 1;
+		weightObject += parse(str);
+		return weightObject;
+	}
 };
 
 //--------------------------------------------------------------------
 
-Value* parse(char* F, char L)
+int parse(std::string List)
 {
+    int weightAll = 0;
+    int i = 0;
 
+    for(int i = 0; i < List.size(); i++)
+    {
+        if(List.at(i) == ' ' || List.at(i) == ',' || List.at(i) == '.')
+        {
+            i++;
+        }
+
+        else if(List.at(i) == '\\')
+        {
+            i++;
+        }
+
+        else if(isdigit(List.at(i)))
+        {
+            if(i != 0)
+            {
+                if(!(isdigit(List.at(i-1))))
+                {
+                    Num numVal;
+                    weightAll += numVal.weight(List);
+                }
+            }
+            ++i;
+        }
+
+        else if(List.at(i) == 'n')
+        {
+            Null nullVal;
+            weightAll += nullVal.weight(List);
+            i += 3;
+        }
+
+        else if(List.at(i) == 't')
+        {
+            Bool boolVal;
+            weightAll += boolVal.weight(List);
+            i += 3;
+        }
+
+        else if(List.at(i) == 'f')
+        {
+            Bool boolVal;
+            weightAll += boolVal.weight(List);
+            i += 4;
+        }
+
+        else if(List.at(i) == '"')
+        {
+            int j = i;
+            bool loopFlag = true;
+            while(j < List.size() && loopFlag == true)
+            {
+                if(List.at(j) == '"')
+                {
+                    i= j;
+                    loopFlag = false;
+                }
+                else
+                {
+                    j++;
+                }
+            }
+            String strVal;
+            weightAll += strVal.weight(List);
+        }
+
+        else if(List.at(i) == '{')
+        {
+            int j = i;
+            bool loopFlag = true;
+            while(j < List.size() && loopFlag == true)
+            {
+                if(List.at(j) == '}')
+                {
+                    loopFlag = false;
+                }
+                else
+                {
+                    j++;
+                }
+            }
+
+
+            std::string List2= "   ";
+            List2 = List.substr(i + 1, j-i-1);
+            Object objectVal;
+            weightAll += objectVal.weight(List2);
+            i = ++j;
+        }
+
+        else if(List.at(i) == '[')
+        {
+            int j = i;
+            bool loopFlag = true;
+            while(j < List.size() && loopFlag == true)
+            {
+                if(List.at(j) == ']')
+                {
+                    i= j;
+                    loopFlag = false;
+                }
+                else
+                {
+                    j++;
+                }
+            }
+            std::string List2 = List.substr(i + 1, j-i);
+            Array arrayVal;
+            weightAll += arrayVal.weight(List2);
+            i = ++j;
+        }
+    }
+    return weightAll;
 }
 
-Value* parse_Array(char* F, char L)
-{
-	++F;
-	Array* a = new Array();
 
-	Value* v;
-
-	while(true)
-	{
-		v = parse(F,L);
-	}
-
-	v = parse(F,L);
-
-}
 
 //If you see a number copy until a comma or white space
 
@@ -113,16 +189,15 @@ using namespace std;
 int main(int argc, const char* argv[])
 {
 	string infile1 = "front.json";
-    
+
     ifstream inputFile;
     string List;
 
     inputFile.open(infile1.c_str());
     getline(inputFile, List);
-    
-    cout << List << endl;
+
+    cout << parse(List);
 
 
-    cout << "Hello world!" << endl;
     return 0;
 }
